@@ -1,5 +1,5 @@
 # all the imports
-import sqlite3, os
+import sqlite3, os, json
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
 from contextlib import closing
@@ -56,6 +56,34 @@ def add_entry():
     g.db.commit()
     flash('New entry was successfully posted')
     return redirect(url_for('show_entries'))
+
+@app.route('/insert', methods=['POST'])
+def insert_entry():
+    g.db.execute('insert into entries (title, text) values (?, ?)',
+                 [request.form['title'], request.form['text']])
+    g.db.commit()
+    flash('New entry was successfully posted')
+    return redirect(url_for('show_entries'))
+
+@app.route('/select', methods=['POST'])
+def select_entries():
+    cur = g.db.execute('select title, text from entries where title=?',
+                 [request.form['title']])
+    entries = [dict(title=row[0], text=row[1]) for row in cur.fetchall()]
+    return json.dumps(entries)
+
+@app.route('/delete', methods=['POST'])
+def delete_entries():
+    g.db.execute('delete from entries where title=?',
+                 [request.form['title']])
+    g.db.commit()
+    return "The entries were successfully deleted"
+
+@app.route('/querying', methods=['POST'])
+def querying_entries():
+    cur = g.db.execute(request.form['querying'])
+    entries = [dict(title=row[0], text=row[1]) for row in cur.fetchall()]
+    return json.dumps(entries)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
