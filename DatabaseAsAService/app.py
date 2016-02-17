@@ -17,7 +17,7 @@ DEBUG = True
 SECRET_KEY = 'development key'
 USERNAME = 'admin'
 PASSWORD = 'default'
-CACHE_TIMEOUT = 300
+CACHE_TIMEOUT = 3
 
 UPLOAD_FOLDER = '/tmp/'
 ALLOWED_EXTENSIONS = set(['txt','pdf','zip','tar','doc','docx'])
@@ -29,6 +29,28 @@ app.config.from_object(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 cache = SimpleCache()
+
+class RegistrationForm(Form):
+    username = TextField('Username', [validators.Length(min=4, max=25)])
+    email = TextField('Email Address', [validators.Length(min=6, max=35)])
+    password = PasswordField('New Password', [
+        validators.Required(),
+        validators.EqualTo('confirm', message='Passwords must match')
+    ])
+    confirm = PasswordField('Repeat Password')
+    accept_tos = BooleanField('I accept the TOS', [validators.Required()])
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm(request.form)
+    if request.method == 'POST' and form.validate():
+        user = [form.username.data, form.email.data,
+                    form.password.data]
+        # TODO: save user info in another db
+        #db_session.add(user)
+        flash('Thanks for registering')
+        return redirect(url_for('login'))
+    return render_template('register.html', form=form)
 
 @app.before_request
 def return_cached():
