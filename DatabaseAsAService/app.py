@@ -8,6 +8,9 @@ from werkzeug import secure_filename
 
 from werkzeug.contrib.cache import SimpleCache
 
+from wtforms import Form, BooleanField, TextField, PasswordField, validators
+
+
 # configuration
 DATABASE = '/tmp/honeycomb.db'
 DEBUG = True
@@ -27,19 +30,19 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 cache = SimpleCache()
 
-class cached(object):
-
-    def __init__(self, timeout=None):
-        self.timeout = timeout or CACHE_TIMEOUT
-
-    def __call__(self, f):
-        def decorator(*args, **kwargs):
-            response = cache.get(request.path)
-            if response is None:
-                response = f(*args, **kwargs)
-                cache.set(request.path, response, self.timeout)
+@app.before_request
+def return_cached():
+    # if GET and POST not empty
+    if not request.values:
+        response = cache.get(request.path)
+        if response: 
             return response
-        return decorator
+
+@app.after_request
+def cache_response(response):
+    if not request.values:
+        cache.set(request.path, response, CACHE_TIMEOUT)
+    return response
 
 def connect_db():
     return sqlite3.connect(app.config['DATABASE'])
