@@ -1,10 +1,12 @@
 # all the imports
-import sqlite3, os, json
+import sqlite3, os, json, time
 from flask import Flask, request, session, g, redirect, url_for, \
      abort, render_template, flash
 from contextlib import closing
 
 from werkzeug import secure_filename
+
+from werkzeug.contrib.cache import SimpleCache
 
 # configuration
 DATABASE = '/tmp/honeycomb.db'
@@ -12,15 +14,32 @@ DEBUG = True
 SECRET_KEY = 'development key'
 USERNAME = 'admin'
 PASSWORD = 'default'
+CACHE_TIMEOUT = 300
 
 UPLOAD_FOLDER = '/tmp/'
-ALLOWED_EXTENSIONS = set(['txt'])
+ALLOWED_EXTENSIONS = set(['txt','pdf','zip','tar','doc','docx'])
 
 # create the application
 app = Flask(__name__)
 app.config.from_object(__name__)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+cache = SimpleCache()
+
+class cached(object):
+
+    def __init__(self, timeout=None):
+        self.timeout = timeout or CACHE_TIMEOUT
+
+    def __call__(self, f):
+        def decorator(*args, **kwargs):
+            response = cache.get(request.path)
+            if response is None:
+                response = f(*args, **kwargs)
+                cache.set(request.path, response, self.timeout)
+            return response
+        return decorator
 
 def connect_db():
     return sqlite3.connect(app.config['DATABASE'])
