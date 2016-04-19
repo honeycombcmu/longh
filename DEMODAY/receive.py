@@ -1,6 +1,6 @@
 from flask import Flask, request
 from subprocess import call
-import json, requests
+import json, requests, os.path
 import commands
 app = Flask(__name__)
 
@@ -47,10 +47,13 @@ def call_Spark(task_id, train_address, test_address):
     print commands.getoutput(cmd)
 
 def back(task_id):
-    post_data = {'task_id': task_id, 'result_address': RESULT_ADDRESS + task_id + '.json'}
+    path = RESULT_ADDRESS + str(task_id) + '.json'
+    post_data = {'error': 1,  'task_id': task_id, 'result_address': path}
+    if os.path.isfile(path):
+        post_data['error'] = 0
     print post_data
     response = requests.post(BACK_URL, data=post_data)
-    print(response.content)
+    print response.content
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=PORT, debug=True)
